@@ -30,7 +30,7 @@ ifneq ($(TWRP_CUSTOM_KEYBOARD),)
 else
   LOCAL_SRC_FILES += hardwarekeyboard.cpp
 endif
-
+LOCAL_CFLAGS += -Wno-sign-compare
 LOCAL_SHARED_LIBRARIES += libminuitwrp libc libstdc++
 LOCAL_MODULE := libguitwrp
 

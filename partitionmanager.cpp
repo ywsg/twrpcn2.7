@@ -1576,48 +1576,37 @@ int TWPartitionManager::usb_storage_enable(void) {
 	string ext_path;
 	bool has_multiple_lun = false;
 
+	DataManager::GetValue(TW_HAS_DUAL_STORAGE, has_dual);
 	DataManager::GetValue(TW_HAS_DATA_MEDIA, has_data_media);
-	string Lun_File_str = CUSTOM_LUN_FILE;
-	size_t found = Lun_File_str.find("%");
-	if (found != string::npos) {
-		sprintf(lun_file, CUSTOM_LUN_FILE, 1);
-		if (TWFunc::Path_Exists(lun_file))
-			has_multiple_lun = true;
-	}
-	if (!has_multiple_lun) {
-		LOGINFO("Device doesn't have multiple lun files, mount current storage\n");
-		sprintf(lun_file, CUSTOM_LUN_FILE, 0);
-		if (TWFunc::Get_Root_Path(DataManager::GetCurrentStoragePath()) == "/data") {
-			TWPartition* Mount = Find_Next_Storage("", "/data");
-			if (Mount) {
-				if (!Open_Lun_File(Mount->Mount_Point, lun_file))
-					return false;
-			} else {
-				LOGERR("Unable to find storage partition to mount to USB\n");
+	if (has_dual == 1 && has_data_media == 0) {
+		string Lun_File_str = CUSTOM_LUN_FILE;
+		size_t found = Lun_File_str.find("%");
+		if (found != string::npos) {
+			sprintf(lun_file, CUSTOM_LUN_FILE, 1);
+			if (TWFunc::Path_Exists(lun_file))
+				has_multiple_lun = true;
+		}
+		if (!has_multiple_lun) {
+			// Device doesn't have multiple lun files, mount current storage
+			sprintf(lun_file, CUSTOM_LUN_FILE, 0);
+			return Open_Lun_File(DataManager::GetCurrentStoragePath(), lun_file);
+		} else {
+			// Device has multiple lun files
+			sprintf(lun_file, CUSTOM_LUN_FILE, 0);
+			if (!Open_Lun_File(DataManager::GetSettingsStoragePath(), lun_file))
 				return false;
-			}
-		} else if (!Open_Lun_File(DataManager::GetCurrentStoragePath(), lun_file)) {
-			return false;
+			DataManager::GetValue(TW_EXTERNAL_PATH, ext_path);
+			sprintf(lun_file, CUSTOM_LUN_FILE, 1);
+			return Open_Lun_File(ext_path, lun_file);
 		}
 	} else {
-		LOGINFO("Device has multiple lun files\n");
-		TWPartition* Mount1;
-		TWPartition* Mount2;
+		if (has_data_media == 0)
+			ext_path = DataManager::GetCurrentStoragePath();
+		else
+			DataManager::GetValue(TW_EXTERNAL_PATH, ext_path);
 		sprintf(lun_file, CUSTOM_LUN_FILE, 0);
-		Mount1 = Find_Next_Storage("", "/data");
-		if (Mount1) {
-			if (!Open_Lun_File(Mount1->Mount_Point, lun_file))
-				return false;
-			Mount2 = Find_Next_Storage(Mount1->Mount_Point, "/data");
-			if (Mount2) {
-				Open_Lun_File(ext_path, lun_file);
-			}
-		} else {
-			LOGERR("Unable to find storage partition to mount to USB\n");
-			return false;
-		}
+		return Open_Lun_File(ext_path, lun_file);
 	}
-	property_set("sys.storage.ums_enabled", "1");
 	return true;
 }
 
@@ -1628,15 +1617,22 @@ int TWPartitionManager::usb_storage_disable(void) {
 
 	for (index=0; index<2; index++) {
 		sprintf(lun_file, CUSTOM_LUN_FILE, index);
-		ret = TWFunc::write_file(lun_file, str);
+		//ret = TWFunc::write_file(lun_file, str);
+		
+		ret = system("sh /umountusb.sh");
+		
+		Mount_All_Storage();
+		Update_System_Details();
 		if (ret < 0) {
-			break;
-		}
+			//break;
+		LOGERR("Unable to write to ums lunfile '%s'.", lun_file);
+		} else {
+		LOGERR("write to ums lunfile '%s' succeed.", lun_file);
+					}
 	}
 	Mount_All_Storage();
 	Update_System_Details();
 	UnMount_Main_Partitions();
-	property_set("sys.storage.ums_enabled", "0");
 	if (ret < 0 && index == 0) {
 		LOGERR("Unable to write to ums lunfile '%s'.", lun_file);
 		return false;

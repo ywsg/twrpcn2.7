@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_SRC_FILES := events.c resources.c graphics_overlay.c
+LOCAL_SRC_FILES := events.c resources.c
 
 ifneq ($(TW_BOARD_CUSTOM_GRAPHICS),)
     LOCAL_SRC_FILES += $(TW_BOARD_CUSTOM_GRAPHICS)
@@ -50,16 +50,6 @@ ifeq ($(TWRP_EVENT_LOGGING), true)
 LOCAL_CFLAGS += -D_EVENT_LOGGING
 endif
 
-ifeq ($(subst ",,$(TARGET_RECOVERY_PIXEL_FORMAT)),RGBX_8888)
-  LOCAL_CFLAGS += -DRECOVERY_RGBX
-endif
-ifeq ($(subst ",,$(TARGET_RECOVERY_PIXEL_FORMAT)),BGRA_8888)
-  LOCAL_CFLAGS += -DRECOVERY_BGRA
-endif
-ifeq ($(subst ",,$(TARGET_RECOVERY_PIXEL_FORMAT)),RGB_565)
-  LOCAL_CFLAGS += -DRECOVERY_RGB_565
-endif
-
 ifeq ($(TARGET_RECOVERY_PIXEL_FORMAT),"RGBX_8888")
   LOCAL_CFLAGS += -DRECOVERY_RGBX
 endif
@@ -72,10 +62,6 @@ endif
 
 ifeq ($(BOARD_HAS_FLIPPED_SCREEN), true)
 LOCAL_CFLAGS += -DBOARD_HAS_FLIPPED_SCREEN
-endif
-
-ifeq ($(TW_IGNORE_MAJOR_AXIS_0), true)
-LOCAL_CFLAGS += -DTW_IGNORE_MAJOR_AXIS_0
 endif
 
 ifneq ($(BOARD_USE_CUSTOM_RECOVERY_FONT),)
